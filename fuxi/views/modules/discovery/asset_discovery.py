@@ -5,8 +5,11 @@
 # @File    : asset_discovery.py
 # @Desc    : ""
 
+import json
 import nmap
 import time
+import requests
+import subprocess
 from multiprocessing import Pool
 from apscheduler.schedulers.blocking import BlockingScheduler
 from fuxi.views.lib.mongo_db import connectiondb, db_name_conf
@@ -61,6 +64,19 @@ class AssetDiscovery:
             except Exception as e:
                 print("[!] Save discovery result error %s" % e)
 
+            try:
+                filename = "/opt/fuxi/exception.conf"
+                arg = res['host'] + ":" + str(res['port'])
+                process = subprocess.Popen(['grep', '-w', arg, filename], stdout=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                if stdout == '':
+                    print "### FIND OUT ###\n"
+                    nowTime = str(int(round(time.time() * 1000)))
+                    rawdata = "{\"subject\": \"Host port security scan exception\", \"type\": \"Notification\", \"message\": \"{\\\"message_type\\\":\\\"alarm\\\",\\\"alarm_id\\\":\\\"PORT_SCAN_ALARM\\\",\\\"alarm_name\\\":\\\"Host port security scan exception\\\",\\\"alarm_status\\\":\\\"alarm\\\",\\\"time\\\":" + nowTime + ",\\\"namespace\\\":\\\"\\\",\\\"metric_name\\\":\\\"Host port security scan exception\\\",\\\"dimension\\\":\\\"" + arg + "\\\",\\\"period\\\":300,\\\"filter\\\":\\\"\\\",\\\"comparison_operator\\\":\\\"\\\",\\\"value\\\":\\\"" + arg + "\\\",\\\"unit\\\":\\\"\\\",\\\"count\\\":1,\\\"alarmValue\\\":[{\\\"time\\\":" + nowTime + ",\\\"value\\\":\\\"" + arg + "\\\"}]}\"}"
+                    r = requests.post('http://xxx.xxx.xxx.xxx:8090/sendAlarm/' + res['asset_name'] , data=rawdata)
+                    print(r.text)
+            except Exception as e:
+                print("[!] Send alarm error %s" % e)
 
 def port_scanner(host, port_list):
     result = []
